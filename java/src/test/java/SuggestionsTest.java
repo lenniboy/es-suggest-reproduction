@@ -2,6 +2,7 @@ import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.index.IndexRequestBuilder;
+import org.elasticsearch.action.update.UpdateRequestBuilder;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
@@ -57,7 +58,7 @@ public class SuggestionsTest{
         // Add documents
         final IndexRequestBuilder indexRequestBuilder = client.prepareIndex(indexName, documentType, documentId);
         // build json object
-        final XContentBuilder contentBuilder = jsonBuilder().prettyPrint()
+        final XContentBuilder indexContentBuilder = jsonBuilder().prettyPrint()
                 .startObject()
                     .field("name", "Queen")
                     .startObject("suggest")
@@ -70,12 +71,30 @@ public class SuggestionsTest{
                 .endObject();
 
         System.out.println("Indexing document");
-        System.out.println(contentBuilder.string());
+        System.out.println(indexContentBuilder.string());
 
-        indexRequestBuilder.setSource(contentBuilder);
+        indexRequestBuilder.setSource(indexContentBuilder);
         indexRequestBuilder.execute().actionGet();
 
         // Get document
+        final UpdateRequestBuilder updateRequestBuilder = client.prepareUpdate(indexName, documentType, documentId);
+        // build json object
+        final XContentBuilder updateContentBuilder = jsonBuilder().prettyPrint()
+                .startObject()
+                    .startObject("doc")
+                        .startObject("suggest")
+                            .startObject("payload")
+                                .field("country", "DE")
+                            .endObject()
+                        .endObject()
+                    .endObject()
+                .endObject();
+
+        System.out.println("Updating document");
+        System.out.println(updateContentBuilder.string());
+
+        updateRequestBuilder.setSource(updateContentBuilder);
+        updateRequestBuilder.execute().actionGet();
 
 
         assertThat("foo", is("bar"));
