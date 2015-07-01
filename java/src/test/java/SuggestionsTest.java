@@ -1,6 +1,7 @@
 import org.elasticsearch.action.admin.indices.create.CreateIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
+import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequestBuilder;
 import org.elasticsearch.action.update.UpdateRequestBuilder;
 import org.elasticsearch.client.Client;
@@ -19,7 +20,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 public class SuggestionsTest{
 
     String indexName = "suggestions-bug";
-    String documentType = "song";
+    String documentType = "band";
     String documentId = "1";
 
     @Test
@@ -55,7 +56,7 @@ public class SuggestionsTest{
 
         createIndexRequestBuilder.execute().actionGet();
 
-        // Add documents
+        // Index document
         final IndexRequestBuilder indexRequestBuilder = client.prepareIndex(indexName, documentType, documentId);
         // build json object
         final XContentBuilder indexContentBuilder = jsonBuilder().prettyPrint()
@@ -76,7 +77,7 @@ public class SuggestionsTest{
         indexRequestBuilder.setSource(indexContentBuilder);
         indexRequestBuilder.execute().actionGet();
 
-        // Get document
+        // Update payload
         final UpdateRequestBuilder updateRequestBuilder = client.prepareUpdate(indexName, documentType, documentId);
         // build json object
         final XContentBuilder updateContentBuilder = jsonBuilder().prettyPrint()
@@ -96,6 +97,12 @@ public class SuggestionsTest{
         updateRequestBuilder.setSource(updateContentBuilder);
         updateRequestBuilder.execute().actionGet();
 
+        GetResponse getResponse = client.prepareGet(indexName, documentType, documentId)
+                .execute()
+                .actionGet();
+
+        System.out.println("Fetching document. Response is");
+        System.out.println(getResponse.getFields());
 
         assertThat("foo", is("bar"));
     }
