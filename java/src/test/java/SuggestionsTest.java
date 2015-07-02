@@ -11,6 +11,7 @@ import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.Map;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 import static org.hamcrest.CoreMatchers.is;
@@ -101,8 +102,16 @@ public class SuggestionsTest{
                 .execute()
                 .actionGet();
 
+        System.out.println("Waiting one second for ES to finish indexing");
+        Thread.sleep(1000);
         System.out.println("Fetching document. Response is");
-        System.out.println(getResponse.getFields());
+        System.out.println(getResponse.getSourceAsString());
+
+        Map suggest = (Map<String, Map<String, String>>)getResponse.getSourceAsMap().get("suggest");
+        Map<String, String> payload = (Map<String, String>)suggest.get("payload");
+        String country = payload.get("country");
+
+        System.out.println("The payload country in the document is " + country);
 
         assertThat("foo", is("bar"));
     }
