@@ -5,12 +5,12 @@ import com.sksamuel.elastic4s.{ElasticClient, SimpleAnalyzer}
 import org.scalatest.{FlatSpec, Matchers}
 
 class PayloadSpec extends FlatSpec with Matchers {
+  val client = ElasticClient.remote("localhost", 9300)
+  val indexName = "bands"
 
   behavior of "Elasticsearch payloads"
 
   it should "elastic search reproduction case" in {
-    val client = ElasticClient.remote("localhost", 9300)
-    val indexName = "bands"
 
     client.execute { delete index indexName }.await
 
@@ -34,25 +34,38 @@ class PayloadSpec extends FlatSpec with Matchers {
       |    "input" : ["Queen"],
       |    "output" : "Queen",
       |    "payload" : {
-      |      "country" : "GB"
+      |      "country" : "old country - not updated"
       |    }
       |  }
       |}
     """.stripMargin
     client.execute { index into indexName / "band" id "1" doc StringDocumentSource(insertJson) }.await
 
-    val payloadUpdateJson = """
+    updateDocument("""
       |{
       |  "suggest" : {
+      |    "input" : ["Queen"],
+      |    "output" : "Queen1",
       |    "payload" : {
-      |      "country" : "new updated country"
+      |      "country" : "new country - updated!"
       |    }
       |  }
       |}
-    """.stripMargin
-    client.execute { update id "1" in indexName / "band" doc StringDocumentSource(payloadUpdateJson) }.await
+    """.stripMargin)
 
-    Thread.sleep(1000) //wait for the indexing to finish
+    updateDocument("""
+      |{
+      |  "suggest" : {
+      |    "input" : ["Queen"],
+      |    "output" : "Queen",
+      |    "payload" : {
+      |      "country" : "new country - updated!"
+      |    }
+      |  }
+      |}
+    """.stripMargin)
+
+    Thread.sleep(2000) //wait for the indexing to finish
     val searchRes = client.execute { search in indexName / "band" }.await
     println("Search response:")
     println(searchRes)
@@ -66,4 +79,7 @@ class PayloadSpec extends FlatSpec with Matchers {
     println("Suggest response:")
     println(resp)
   }
+
+  def updateDocument(json: String) =
+    client.execute { update id "1" in indexName / "band" doc StringDocumentSource(json) }.await
 }
