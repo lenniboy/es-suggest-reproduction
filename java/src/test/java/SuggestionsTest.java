@@ -3,14 +3,20 @@ import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequestBuilder;
 import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequestBuilder;
+import org.elasticsearch.action.suggest.SuggestRequestBuilder;
+import org.elasticsearch.action.suggest.SuggestResponse;
 import org.elasticsearch.action.update.UpdateRequestBuilder;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.search.suggest.Suggest;
+import org.elasticsearch.search.suggest.completion.CompletionSuggestion;
+import org.elasticsearch.search.suggest.completion.CompletionSuggestionBuilder;
 import org.junit.Test;
 
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.Map;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
@@ -109,10 +115,23 @@ public class SuggestionsTest{
 
         Map suggest = (Map<String, Map<String, String>>)getResponse.getSourceAsMap().get("suggest");
         Map<String, String> payload = (Map<String, String>)suggest.get("payload");
-        String country = payload.get("country");
+        String getCountry = payload.get("country");
 
-        System.out.println("The payload country in the document is " + country);
+        System.out.println("The payload country in the document is " + getCountry);
 
-        assertThat("foo", is("bar"));
+        CompletionSuggestionBuilder suggestionsBuilder = new CompletionSuggestionBuilder("suggest");
+        suggestionsBuilder.text("Queen");
+        suggestionsBuilder.field("suggest");
+        SuggestRequestBuilder suggestRequestBuilder = client.prepareSuggest(indexName).addSuggestion(suggestionsBuilder);
+        SuggestResponse suggestResponse = suggestRequestBuilder.execute().actionGet();
+
+        System.out.println("Suggestion response is");
+        System.out.println(suggestResponse.getSuggest());
+
+        CompletionSuggestion.Entry.Option option = (CompletionSuggestion.Entry.Option)
+            suggestResponse.getSuggest().getSuggestion("suggest").getEntries().get(0).getOptions().get(0);
+        String suggestCountry = (String) option.getPayloadAsMap().get("country");
+
+        assertThat(getCountry, is(suggestCountry));
     }
 }
